@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "Royalroad Word Counter",
+  "version": "0.1.0",
+  "description": "Counts words in a fixed section on Royalroad. Wouldn't suggest using it elsewhere.",
+  "icons": { "128": "icon128.png" },
+  "content_scripts": [
+    {
+      "matches": ["https://www.royalroad.com/*"],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+  "permissions": []
+}
