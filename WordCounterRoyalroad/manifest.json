@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Royalroad Word Counter",
   "version": "0.1.0",
-  "description": "Counts words in a fixed section on Royalroad. Wouldn't suggest using it elsewhere.",
+  "description": "Gives wordcounts for chapters on Royalroad.",
   "icons": { "128": "icon128.png" },
   "content_scripts": [
     {
