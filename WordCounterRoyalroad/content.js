@@ -1,13 +1,13 @@
 const PARENT_SELECTOR = "div.chapter-inner.chapter-content";
-/***** No edits needed below *****/
 (function () {
   let isUpdatingBadge = false;
   const LOG_PREFIX = "[WordCounter]";
   const MAX_TRIES = 20, TRY_MS = 300;
+  const DRAG_THRESHOLD_PX = 5;
 
   function log(...args) { try { console.log(LOG_PREFIX, ...args); } catch(_){} }
 
-    function wordCount(text) {
+  function wordCount(text) {
     const m = text.replace(/\s+/g, " ").trim().match(/[\p{L}\p{N}’'-]+/gu);
     return m ? m.length : 0;
   }
@@ -36,6 +36,81 @@ const PARENT_SELECTOR = "div.chapter-inner.chapter-content";
     while ((cur = tw.nextNode())) s += cur.nodeValue;
     return s;
   }
+  //Mouse checks; for dragging box and for copying count
+  function attachDragAndClick(b) {
+    if (b.dataset.dragAttached === "1") return;
+    b.dataset.dragAttached = "1";
+
+    let pointerId = null;
+    let startX = 0, startY = 0, startLeft = 0, startTop = 0;
+    let dragging = false;
+
+    function setPos(left, top) {
+      b.style.left = `${left}px`;
+      b.style.top = `${top}px`;
+      b.style.right = "auto";
+      b.style.bottom = "auto";
+    }
+
+    //Press on count; initializes checks for mouse movement
+    b.addEventListener("pointerdown", (e) => {
+      if (e.pointerType === "mouse" && e.button !== 0) return;
+      pointerId = e.pointerId;
+      b.setPointerCapture(pointerId);
+      const r = b.getBoundingClientRect();
+      startLeft = r.left; startTop = r.top;
+      startX = e.clientX; startY = e.clientY;
+      dragging = false;
+      b.style.cursor = "grabbing";
+      e.preventDefault();
+    });
+
+    //Mouse movement; if mouse is pressed on count, log movement
+    b.addEventListener("pointermove", (e) => {
+      if (pointerId === null || e.pointerId !== pointerId) return;
+      const dx = e.clientX - startX; const dy = e.clientY - startY;
+    
+      //If drag amount exceeds threshold, do not copy
+      if (!dragging) {
+        if ((dx * dx + dy * dy) < (DRAG_THRESHOLD_PX * DRAG_THRESHOLD_PX)) return;
+        dragging = true;
+      }
+      setPos(startLeft + dx, startTop + dy);
+      e.preventDefault();
+    });
+
+    //Mouse press released; drag or copy
+    b.addEventListener("pointerup", (e) => {
+      if (pointerId === null || e.pointerId !== pointerId) return;
+      b.releasePointerCapture(pointerId);
+      pointerId = null;
+      b.style.cursor = "grab";
+
+      //if dragging, stop; no actions must now be taken
+      if (dragging) {
+        dragging = false;
+        return;
+      }
+
+      //copy count
+      const n = b.dataset.count || "";
+      navigator.clipboard?.writeText(n);
+      b.classList.add("copied");
+      b.textContent = `Copied: ${n}`;
+      setTimeout(() => {
+        b.classList.remove("copied");
+        b.textContent = `Words: ${n}`;
+      }, 900);
+    });
+
+    b.addEventListener("lostpointercapture", () => {
+      pointerId = null;
+      dragging = false;
+      b.style.cursor = "grab";
+    });
+
+    b.style.cursor = "grab";
+  }
 
   function ensureBadge(doc) {
     let b = doc.getElementById("oswc-badge");
@@ -43,17 +118,8 @@ const PARENT_SELECTOR = "div.chapter-inner.chapter-content";
       b = doc.createElement("div");
       b.id = "oswc-badge";
       b.title = "Click to copy";
-      b.addEventListener("click", () => {
-        const n = b.dataset.count || "";
-        navigator.clipboard?.writeText(n);
-        b.classList.add("copied");
-        b.textContent = `Copied: ${n}`;
-        setTimeout(() => {
-          b.classList.remove("copied");
-          b.textContent = `Words: ${n}`;
-        }, 900);
-      });
-      doc.documentElement.appendChild(b);
+      (doc.body || doc.documentElement).appendChild(b);
+      attachDragAndClick(b);
     }
     return b;
   }
@@ -84,12 +150,13 @@ const PARENT_SELECTOR = "div.chapter-inner.chapter-content";
   }
 
   // Debounce mutation-triggered recounts
-  let recountTimer = null;
+  let recountScheduled = false;
   function scheduleRecount(win) {
-    if (isUpdatingBadge) return;     // ignore own badge changes
-    if (recountTimer) clearTimeout(recountTimer);
-    recountTimer = setTimeout(() => {
-      recountTimer = null;
+    if (isUpdatingBadge) return;
+    if (recountScheduled) return;
+    recountScheduled = true;
+    setTimeout(() => {
+      recountScheduled = false;
       tryCountHere(win);
     }, 250);
   }
@@ -100,7 +167,7 @@ const PARENT_SELECTOR = "div.chapter-inner.chapter-content";
     if (!parent) return;
 
     const obs = new MutationObserver((mutList) => {
-      // Ignore mutations that involve our badge
+      // Ignore mutations that involve extension badge
       for (const m of mutList) {
         if (m.target?.id === "oswc-badge" || (m.addedNodes && [...m.addedNodes].some(n => n.id === "oswc-badge"))) {
           return;
