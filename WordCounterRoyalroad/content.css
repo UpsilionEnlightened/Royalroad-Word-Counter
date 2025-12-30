@@ -5,11 +5,13 @@
   z-index: 2147483647;
   background: #111;
   color: #fff;
+  border-radius: 14px !important;
+  overflow: hidden;
   padding: 8px 10px;
-  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.12);
   font: 13px/1.3 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-  box-shadow: 0 6px 18px rgba(0,0,0,.25);
   cursor: pointer;
   user-select: none;
+  touch-action: none;
 }
 #oswc-badge.copied { background: #0a7; }
