@@ -3,7 +3,7 @@ download the file folder,
 go to your extensions manager in your browser (press the puzzle piece icon then manage extensions),
 turn on developer mode,
 press load unpacked,
-then select the folder.
+then select the folder (the one inside the zip, not the one created when you unpack it, and not the parent folder; the one named WordCounterRoyalroad).
 
 It should work after that.
 
